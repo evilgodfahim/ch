@@ -1,0 +1,41 @@
+name: Update Chaarcha RSS Feeds
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"   # every 4 hours
+  workflow_dispatch:         # allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        env:
+          FLARESOLVERR_URL: ${{ secrets.FLARESOLVERR_URL }}
+        run: python scraper.py
+
+      - name: Commit and push feeds
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add explainer.xml analysis.xml thoughts.xml index.html seen.json
+          git diff --staged --quiet \
+            || git commit -m "chore: update feeds $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
