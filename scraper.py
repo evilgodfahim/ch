@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """
 Chaarcha RSS Feed Generator
-Fetches thoughts / analysis / explainer from chaarcha.com via FlareSolverr.
+Fetches thoughts / analysis / explainer from chaarcha.com via plain HTTP.
 Outputs:  explainer.xml  analysis.xml  thoughts.xml  index.html  seen.json
 
 seen.json stores already-fetched article content so each slug is only
-fetched via FlareSolverr once across all runs.
+fetched via HTTP once across all runs.
 """
-import os, json, time, html as html_mod
+import json, time, html as html_mod
 import requests
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 
 # ── config ────────────────────────────────────────────────────────────────────
-FLARESOLVERR  = "http://localhost:8191/v1"  # ← edit this
 API_BASE      = "https://api.chaarcha.com/api/v2/home/"
 SITE_BASE     = "https://www.chaarcha.com"
 MAX_ARTICLES  = 20   # per feed (most-recent N articles in RSS)
@@ -44,22 +43,26 @@ def save_seen(seen: dict) -> None:
         json.dump(seen, f, ensure_ascii=False, indent=2)
 
 
-# ── FlareSolverr helper ───────────────────────────────────────────────────────
-def flare_get(url: str, retries: int = 3) -> str | None:
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+
+# ── HTTP helper ───────────────────────────────────────────────────────────────
+def http_get(url: str, retries: int = 3) -> str | None:
     for attempt in range(retries):
         try:
-            r = requests.post(
-                FLARESOLVERR,
-                json={"cmd": "request.get", "url": url, "maxTimeout": 60000},
-                timeout=90,
-            )
-            d = r.json()
-            if d.get("status") == "ok":
-                return d["solution"]["response"]
-            print(f"  [warn] FlareSolverr: {d.get('message', 'unknown error')}")
+            r = requests.get(url, headers=HEADERS, timeout=30)
+            r.raise_for_status()
+            return r.text
         except Exception as exc:
             print(f"  [warn] attempt {attempt + 1} – {exc}")
-        time.sleep(4 * (attempt + 1))
+        time.sleep(3 * (attempt + 1))
     print(f"  [error] gave up on {url}")
     return None
 
@@ -69,12 +72,11 @@ def fetch_story_list(category_slug: str) -> list[dict]:
     stories: list[dict] = []
     for page in range(1, MAX_API_PAGES + 1):
         url  = f"{API_BASE}?category_slug={category_slug}&page={page}&page_size=15"
-        raw  = flare_get(url)
+        raw  = http_get(url)
         if not raw:
             break
         try:
             text = raw.strip()
-            # FlareSolverr sometimes wraps JSON in a bare HTML shell
             if text.startswith("<"):
                 soup = BeautifulSoup(text, "lxml")
                 pre  = soup.find("pre")
@@ -151,9 +153,9 @@ def _find_body(obj, depth: int = 0):
 
 
 def _scrape_content(news_slug: str, category_slug: str) -> str:
-    """Actually fetch and parse one article page via FlareSolverr."""
+    """Actually fetch and parse one article page via plain HTTP."""
     url = f"{SITE_BASE}/{category_slug}/{news_slug}"
-    raw = flare_get(url)
+    raw = http_get(url)
     if not raw:
         return ""
 
@@ -192,7 +194,7 @@ def get_article_content(news_slug: str, category_slug: str,
     """
     Return (content_html, was_cached).
     If the slug is already in seen, return cached content immediately.
-    Otherwise fetch via FlareSolverr, store in seen, and return fresh content.
+    Otherwise fetch via HTTP, store in seen, and return fresh content.
     """
     if news_slug in seen:
         return seen[news_slug]["content"], True
@@ -323,7 +325,7 @@ def write_index(done: list[str], seen: dict) -> None:
 <div class="grid">{cards}
 </div>
 <footer>
-  Scraped via FlareSolverr &nbsp;·&nbsp;
+  Scraped via HTTP &nbsp;·&nbsp;
   <a href="https://www.chaarcha.com" target="_blank">chaarcha.com</a>
 </footer>
 </body>
