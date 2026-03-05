@@ -7,7 +7,7 @@ Outputs:  explainer.xml  analysis.xml  thoughts.xml  index.html  seen.json
 seen.json stores already-fetched article content so each slug is only
 fetched via HTTP once across all runs.
 """
-import json, time, html as html_mod
+import os, json, time, html as html_mod
 import requests
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
