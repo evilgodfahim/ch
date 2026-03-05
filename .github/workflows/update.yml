@@ -27,8 +27,6 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run scraper
-        env:
-          FLARESOLVERR_URL: ${{ secrets.FLARESOLVERR_URL }}
         run: python scraper.py
 
       - name: Commit and push feeds
