@@ -8,21 +8,24 @@
   :root{--blue:#274e8f;--light:#f0f4fb;}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-       background:var(--light);color:#222;padding:2rem}
+        background:var(--light);color:#222;padding:2rem}
   header{max-width:860px;margin:0 auto 2rem}
   h1{color:var(--blue);font-size:1.9rem;margin-bottom:.3rem}
   .meta{color:#666;font-size:.85rem}
+  .cache-note{margin-top:.4rem;font-size:.8rem;color:#888;
+               background:#fff;display:inline-block;padding:.2rem .7rem;
+               border-radius:20px;border:1px solid #dde}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-        gap:1.2rem;max-width:860px;margin:0 auto}
+         gap:1.2rem;max-width:860px;margin:0 auto}
   .card{background:#fff;border-radius:12px;padding:1.5rem;
-        box-shadow:0 2px 10px rgba(0,0,0,.07);display:flex;flex-direction:column;gap:.6rem}
+         box-shadow:0 2px 10px rgba(0,0,0,.07);display:flex;flex-direction:column;gap:.6rem}
   .card-icon{font-size:2rem}
   .card h2{color:var(--blue);font-size:1.15rem}
   .src{font-size:.72rem;color:#999;word-break:break-all}
   .src a{color:#999;text-decoration:none}
   .btns{display:flex;gap:.6rem;margin-top:.4rem}
   .btn-rss,.btn-web{padding:.4rem .9rem;border-radius:7px;
-                    text-decoration:none;font-size:.88rem;font-weight:600}
+                     text-decoration:none;font-size:.88rem;font-weight:600}
   .btn-rss{background:var(--blue);color:#fff}
   .btn-web{background:#e8eef7;color:var(--blue)}
   .btn-rss:hover{background:#1a3a6b}
@@ -34,40 +37,37 @@
 <body>
 <header>
   <h1>চরচা RSS Feeds</h1>
-  <p class="meta">Feeds update every 4 hours via GitHub Actions</p>
+  <p class="meta">Last updated: 2026-03-05 08:06 UTC &nbsp;·&nbsp; refreshes every 4 hours</p>
+  <p class="cache-note">📦 0 articles cached in seen.json</p>
 </header>
 <div class="grid">
-
-  <div class="card">
-    <div class="card-icon">📰</div>
-    <h2>এক্সপ্লেইনার</h2>
-    <p class="src"><a href="https://www.chaarcha.com/explainer" target="_blank">chaarcha.com/explainer</a></p>
-    <div class="btns">
-      <a class="btn-rss" href="explainer.xml">📡 RSS</a>
-      <a class="btn-web" href="https://www.chaarcha.com/explainer" target="_blank">🌐 Source</a>
+    <div class="card">
+      <div class="card-icon">📰</div>
+      <h2>এক্সপ্লেইনার</h2>
+      <p class="src"><a href="https://www.chaarcha.com/explainer" target="_blank">https://www.chaarcha.com/explainer</a></p>
+      <div class="btns">
+        <a class="btn-rss" href="explainer.xml">📡 RSS</a>
+        <a class="btn-web" href="https://www.chaarcha.com/explainer" target="_blank">🌐 Source</a>
+      </div>
     </div>
-  </div>
-
-  <div class="card">
-    <div class="card-icon">📰</div>
-    <h2>বিশ্লেষণ</h2>
-    <p class="src"><a href="https://www.chaarcha.com/analysis" target="_blank">chaarcha.com/analysis</a></p>
-    <div class="btns">
-      <a class="btn-rss" href="analysis.xml">📡 RSS</a>
-      <a class="btn-web" href="https://www.chaarcha.com/analysis" target="_blank">🌐 Source</a>
+    <div class="card">
+      <div class="card-icon">📰</div>
+      <h2>বিশ্লেষণ</h2>
+      <p class="src"><a href="https://www.chaarcha.com/analysis" target="_blank">https://www.chaarcha.com/analysis</a></p>
+      <div class="btns">
+        <a class="btn-rss" href="analysis.xml">📡 RSS</a>
+        <a class="btn-web" href="https://www.chaarcha.com/analysis" target="_blank">🌐 Source</a>
+      </div>
     </div>
-  </div>
-
-  <div class="card">
-    <div class="card-icon">📰</div>
-    <h2>ভাবনা</h2>
-    <p class="src"><a href="https://www.chaarcha.com/thoughts" target="_blank">chaarcha.com/thoughts</a></p>
-    <div class="btns">
-      <a class="btn-rss" href="thoughts.xml">📡 RSS</a>
-      <a class="btn-web" href="https://www.chaarcha.com/thoughts" target="_blank">🌐 Source</a>
+    <div class="card">
+      <div class="card-icon">📰</div>
+      <h2>ভাবনা</h2>
+      <p class="src"><a href="https://www.chaarcha.com/thoughts" target="_blank">https://www.chaarcha.com/thoughts</a></p>
+      <div class="btns">
+        <a class="btn-rss" href="thoughts.xml">📡 RSS</a>
+        <a class="btn-web" href="https://www.chaarcha.com/thoughts" target="_blank">🌐 Source</a>
+      </div>
     </div>
-  </div>
-
 </div>
 <footer>
   Scraped via FlareSolverr &nbsp;·&nbsp;
