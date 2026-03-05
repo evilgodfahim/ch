@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 
 # ── config ────────────────────────────────────────────────────────────────────
-FLARESOLVERR  = os.environ.get("FLARESOLVERR_URL", "http://localhost:8191/v1")
+FLARESOLVERR  = "http://localhost:8191/v1"  # ← edit this
 API_BASE      = "https://api.chaarcha.com/api/v2/home/"
 SITE_BASE     = "https://www.chaarcha.com"
 MAX_ARTICLES  = 20   # per feed (most-recent N articles in RSS)
