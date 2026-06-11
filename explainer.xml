@@ -8,31 +8,7 @@
     <docs>http://www.rssboard.org/rss-specification</docs>
     <generator>python-feedgen</generator>
     <language>bn</language>
-    <lastBuildDate>Thu, 11 Jun 2026 08:44:10 +0000</lastBuildDate>
-    <item>
-      <title>বিশ্বকাপ: বিদায়ের মঞ্চ হতে পারে যেসব তারকার</title>
-      <link>https://www.chaarcha.com/explainer/chlrkcwgpudi</link>
-      <description>&lt;p&gt;&lt;img src="https://images.chaarcha.com/original_images/messi-ronaldo.jpg" alt="বিশ্বকাপ: বিদায়ের মঞ্চ হতে পারে যেসব তারকার" style="max-width:100%"&gt;&lt;br&gt;&lt;small&gt;মেসি ও রোনালদো। ছবি: রয়টার্স&lt;/small&gt;&lt;/p&gt;
-&lt;p&gt;বিশ্বকাপ: বিদায়ের মঞ্চ হতে পারে যেসব তারকার ২০২২ ফুটবল বিশ্বকাপকেই ধারণা করা হচ্ছিল কয়েকজন কিংবদন্তি তারকার সম্ভাব্য শেষ বিশ্বকাপ হিসেবে। তবে শেষ পর্যন্ত সেটা আর হয়নি। বয়সকে হার মানিয়ে মেসি-রোনালদোরা এখনও দাপিয়ে বেড়াচ্ছেন।&lt;/p&gt;</description>
-      <guid isPermaLink="false">https://www.chaarcha.com/explainer/chlrkcwgpudi</guid>
-      <pubDate>Tue, 02 Jun 2026 21:03:08 +0600</pubDate>
-    </item>
-    <item>
-      <title>কাফকায়েস্ক আসলে কী?</title>
-      <link>https://www.chaarcha.com/explainer/chqzdydvr3h9</link>
-      <description>&lt;p&gt;&lt;img src="https://images.chaarcha.com/original_images/1c82a167-0d03-42e1-bf1f-960998efa160.png" alt="কাফকায়েস্ক আসলে কী?" style="max-width:100%"&gt;&lt;br&gt;&lt;small&gt;ছবি: এআই&lt;/small&gt;&lt;/p&gt;
-&lt;p&gt;কাফকায়েস্ক আসলে কি? ১৮৮৩ সালের কথা। অস্ট্রো-হাঙ্গেরিয়ান সাম্রাজ্যের প্রাগ শহরে জন্ম হয় কাফকার। জীবিকার তাগিদে যোগ দেন এক বীমা কোম্পানিতে। দিনভর অফিসের ডেস্কে ফাইল চালাচালি শেষে তার আসল দিন শুরু হতো রাতে আর ছুটির দিনে। কলম হাতে বসতেন তিনি।&lt;/p&gt;</description>
-      <guid isPermaLink="false">https://www.chaarcha.com/explainer/chqzdydvr3h9</guid>
-      <pubDate>Wed, 03 Jun 2026 09:27:55 +0600</pubDate>
-    </item>
-    <item>
-      <title>জাতিসংঘের সাধারণ পরিষদের সভাপতি কী কী দায়িত্ব পালন করেন</title>
-      <link>https://www.chaarcha.com/explainer/chk7nlqe4uha</link>
-      <description>&lt;p&gt;&lt;img src="https://images.chaarcha.com/original_images/UN_khalil.jpg" alt="জাতিসংঘের সাধারণ পরিষদের সভাপতি কী কী দায়িত্ব পালন করেন" style="max-width:100%"&gt;&lt;br&gt;&lt;small&gt;জাতিসংঘ সাধারণ পরিষদের সভাপতি হয়েছেন পররাষ্ট্রমন্ত্রী খলিলুর। ছবি: জাতিসংঘের ওয়েবসাইট&lt;/small&gt;&lt;/p&gt;
-&lt;p&gt;জাতিসংঘের সাধারণ পরিষদের সভাপতি কী কী দায়িত্ব পালন করেন জাতিসংঘের সাধারণ পরিষদের ৮১তম অধিবেশনের সভাপতি পদে নির্বাচিত হয়েছেন পররাষ্ট্রমন্ত্রী খলিলুর রহমান। গত ২ জুন মঙ্গলবার জাতিসংঘের সদর দপ্তরে অনুষ্ঠিত নির্বাচনে সাইপ্রাসের পররাষ্ট্রমন্ত্রীর বিশেষ দূত আন্দ্রেয়াস এস কাকোরিসকে ৮ ভোটে পরাজিত করে তিনি এক বছরের জন্য এই পদে নির্বাচিত হয়েছেন।&lt;/p&gt;</description>
-      <guid isPermaLink="false">https://www.chaarcha.com/explainer/chk7nlqe4uha</guid>
-      <pubDate>Wed, 03 Jun 2026 16:52:57 +0600</pubDate>
-    </item>
+    <lastBuildDate>Thu, 11 Jun 2026 12:44:18 +0000</lastBuildDate>
     <item>
       <title>ফ্ল্যাটে ‘কয়েকদিন’ পড়ে ছিল বৃদ্ধার মরদেহ, আসলে কী হয়েছিল</title>
       <link>https://www.chaarcha.com/explainer/chapiksndiau</link>
@@ -168,6 +144,30 @@
 &lt;p&gt;বাজেটে মার্কিন চুক্তির চাপ কতটা? বোঝা যাবে যেভাবে অর্থনীতিবিদরা বলছেন, চুক্তিটা বোঝার সহজ উপায় হলো একটি সাধারণ বাজারের কথা ভাবা। বড় অংশীদারের কাছ থেকে তৈরি পোশাকে শুল্ক ৩৭ শতাংশ থেকে কমিয়ে ১৯ শতাংশ করার সুযোগ পেতে অন্যপক্ষ ১৩১টি শর্ত মানবে, অথচ আমদানিকারক দেশের দায় থাকবে মাত্র ছয়টি শর্ত মানার।&lt;/p&gt;</description>
       <guid isPermaLink="false">https://www.chaarcha.com/explainer/chorndssvcym</guid>
       <pubDate>Thu, 11 Jun 2026 08:49:52 +0600</pubDate>
+    </item>
+    <item>
+      <title>‘বড়লোকের’ বিশ্বকাপে এবার যা কিছু নতুন</title>
+      <link>https://www.chaarcha.com/explainer/ch8bgvfnnlys</link>
+      <description>&lt;p&gt;&lt;img src="https://images.chaarcha.com/original_images/2026-05-05T175055Z_2_LYNXMPEM4418P_RTROPTP_4_SOCCER-WORLDCUP-NEW-YORK-1200.jpg" alt="‘বড়লোকের’ বিশ্বকাপে এবার যা কিছু নতুন" style="max-width:100%"&gt;&lt;br&gt;&lt;small&gt;বিশ্বকাপে এবার অনেক কিছুই প্রথমবারের মতো দেখা যাবে।&lt;/small&gt;&lt;/p&gt;
+&lt;p&gt;বাজেটে যা যা আছে আগামী অর্থবছরে মোট ৬ লাখ ৯৫ হাজার কোটি টাকা রাজস্ব আয় প্রাক্কলন করা হয়েছে, যা জিডিপির ১০.২ শতাংশ। এর মধ্যে এনবিআরের মাধ্যমে ৬ লাখ ৪ হাজার কোটি টাকা এবং অন্যান্য উৎস হতে ৯১ হাজার কোটি টাকা সংগ্রহ করার প্রস্তাব করেছেন অর্থমন্ত্রী।&lt;/p&gt;</description>
+      <guid isPermaLink="false">https://www.chaarcha.com/explainer/ch8bgvfnnlys</guid>
+      <pubDate>Thu, 11 Jun 2026 16:26:03 +0600</pubDate>
+    </item>
+    <item>
+      <title>আয়কর নিয়ে যা আছে বাজেটে</title>
+      <link>https://www.chaarcha.com/explainer/chqhbcu7eeep</link>
+      <description>&lt;p&gt;&lt;img src="https://images.chaarcha.com/original_images/Budget.jpg" alt="আয়কর নিয়ে যা আছে বাজেটে" style="max-width:100%"&gt;&lt;br&gt;&lt;small&gt;ছবি: সংগৃহীত&lt;/small&gt;&lt;/p&gt;
+&lt;p&gt;বাজেটে যা যা আছে আগামী অর্থবছরে মোট ৬ লাখ ৯৫ হাজার কোটি টাকা রাজস্ব আয় প্রাক্কলন করা হয়েছে, যা জিডিপির ১০.২ শতাংশ। এর মধ্যে এনবিআরের মাধ্যমে ৬ লাখ ৪ হাজার কোটি টাকা এবং অন্যান্য উৎস হতে ৯১ হাজার কোটি টাকা সংগ্রহ করার প্রস্তাব করেছেন অর্থমন্ত্রী।&lt;/p&gt;</description>
+      <guid isPermaLink="false">https://www.chaarcha.com/explainer/chqhbcu7eeep</guid>
+      <pubDate>Thu, 11 Jun 2026 16:38:24 +0600</pubDate>
+    </item>
+    <item>
+      <title>বাজেটে যা যা আছে</title>
+      <link>https://www.chaarcha.com/explainer/chhn5mkjigly</link>
+      <description>&lt;p&gt;&lt;img src="https://images.chaarcha.com/original_images/budget_fKGAWiL.jpg" alt="বাজেটে যা যা আছে" style="max-width:100%"&gt;&lt;br&gt;&lt;small&gt;ছবি: বাসস&lt;/small&gt;&lt;/p&gt;
+&lt;p&gt;বাজেটে যা যা আছে আগামী অর্থবছরে মোট ৬ লাখ ৯৫ হাজার কোটি টাকা রাজস্ব আয় প্রাক্কলন করা হয়েছে, যা জিডিপির ১০.২ শতাংশ। এর মধ্যে এনবিআরের মাধ্যমে ৬ লাখ ৪ হাজার কোটি টাকা এবং অন্যান্য উৎস হতে ৯১ হাজার কোটি টাকা সংগ্রহ করার প্রস্তাব করেছেন অর্থমন্ত্রী।&lt;/p&gt;</description>
+      <guid isPermaLink="false">https://www.chaarcha.com/explainer/chhn5mkjigly</guid>
+      <pubDate>Thu, 11 Jun 2026 17:29:39 +0600</pubDate>
     </item>
   </channel>
 </rss>
