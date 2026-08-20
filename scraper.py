@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 """
 Chaarcha RSS Feed Generator
-Fetches thoughts / analysis / explainer from chaarcha.com via plain HTTP.
-Outputs:  explainer.xml  analysis.xml  thoughts.xml  index.html  seen.json
+────────────────────────────
+Scrapes category pages and extracts article metadata from the Next.js App
+Router RSC flight-data payloads (self.__next_f.push).
 
-seen.json stores already-fetched article content so each slug is only
-fetched via HTTP once across all runs.
+Why not the API?
+  https://api.chaarcha.com/api/v2/home/ now enters a 30-redirect loop.
+  The HTML pages embed the full categoryAllStories JSON in the RSC stream,
+  giving us everything we need: slug, title, excerpt, thumbnail, pub-date.
+
+No full-article fetch. No seen.json. Just:
+  Outputs: explainer.xml  analysis.xml  thoughts.xml  index.html
 """
-import os, json, time, html as html_mod
+
+import re
+import json
+import time
+import html as html_mod
 import requests
+from requests.exceptions import TooManyRedirects
 from datetime import datetime, timezone
-from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 
-# ── config ────────────────────────────────────────────────────────────────────
-API_BASE      = "https://api.chaarcha.com/api/v2/home/"
-SITE_BASE     = "https://www.chaarcha.com"
-MAX_ARTICLES  = 20   # per feed (most-recent N articles in RSS)
-MAX_API_PAGES = 2    # 15 articles/page → up to 30 candidates
-SEEN_FILE     = "seen.json"
+
+# ── config ─────────────────────────────────────────────────────────────────
+SITE_BASE    = "https://www.chaarcha.com"
+MAX_ARTICLES = 20
 
 CATEGORIES = [
     ("explainer", "এক্সপ্লেইনার"),
@@ -26,361 +34,275 @@ CATEGORIES = [
     ("thoughts",  "ভাবনা"),
 ]
 
-# ── seen-cache helpers ────────────────────────────────────────────────────────
-def load_seen() -> dict:
-    """Return {slug: {"content": str, "fetched_at": str}}"""
-    if os.path.exists(SEEN_FILE):
-        try:
-            with open(SEEN_FILE, encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as exc:
-            print(f"[warn] could not load {SEEN_FILE}: {exc}")
-    return {}
-
-
-def save_seen(seen: dict) -> None:
-    with open(SEEN_FILE, "w", encoding="utf-8") as f:
-        json.dump(seen, f, ensure_ascii=False, indent=2)
-
-
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "bn-BD,bn;q=0.9,en-US;q=0.8",
+    "Referer":         "https://www.chaarcha.com/",
 }
 
-# ── HTTP helper ───────────────────────────────────────────────────────────────
+
+# ── HTTP ───────────────────────────────────────────────────────────────────
 def http_get(url: str, retries: int = 3) -> str | None:
+    """
+    Fresh session per call — avoids cookie-induced redirect loops.
+    Bails immediately on redirect loops instead of hitting the 30-redirect wall.
+    """
     for attempt in range(retries):
         try:
-            r = requests.get(url, headers=HEADERS, timeout=30)
+            sess = requests.Session()
+            sess.max_redirects = 5
+            r = sess.get(url, headers=HEADERS, timeout=30)
             r.raise_for_status()
             return r.text
+        except TooManyRedirects:
+            print(f"  [warn] redirect loop — {url}")
+            return None          # no point retrying
         except Exception as exc:
-            print(f"  [warn] attempt {attempt + 1} – {exc}")
-        time.sleep(3 * (attempt + 1))
+            print(f"  [warn] attempt {attempt + 1} — {exc}")
+            time.sleep(3 * (attempt + 1))
     print(f"  [error] gave up on {url}")
     return None
 
 
-# ── article list ──────────────────────────────────────────────────────────────
-def fetch_story_list(category_slug: str) -> list[dict]:
-    stories: list[dict] = []
-    for page in range(1, MAX_API_PAGES + 1):
-        url  = f"{API_BASE}?category_slug={category_slug}&page={page}&page_size=15"
-        raw  = http_get(url)
-        if not raw:
-            break
-        try:
-            text = raw.strip()
-            if text.startswith("<"):
-                soup = BeautifulSoup(text, "lxml")
-                pre  = soup.find("pre")
-                text = pre.get_text() if pre else soup.get_text()
-            data    = json.loads(text)
-            results = data.get("results", [])
-            stories.extend(results)
-            print(f"    page {page}: {len(results)} articles")
-            if not data.get("next"):
-                break
-        except Exception as exc:
-            print(f"  [error] list parse page {page}: {exc}")
-            break
-        time.sleep(2)
-    return stories
-
-
-# ── body block renderer ───────────────────────────────────────────────────────
-def render_blocks(blocks: list) -> str:
-    """Convert Wagtail StreamField blocks to an HTML string."""
+# ── RSC parser ─────────────────────────────────────────────────────────────
+def _decode_rsc_chunks(html: str) -> str:
+    """
+    Collect all self.__next_f.push([1, "..."]) payloads and decode the
+    JSON-string escaping (\\n, \\", etc.) into plain text we can search.
+    """
+    raw_chunks = re.findall(
+        r'self\.__next_f\.push\(\[1,"(.*?)"\]\)',
+        html,
+        re.DOTALL,
+    )
     parts: list[str] = []
-    for block in blocks:
-        btype = block.get("type", "")
-        val   = block.get("value", "")
-
-        if btype in ("paragraph", "rich_text", "richtext", "body") and isinstance(val, str):
-            parts.append(val)
-
-        elif btype == "heading" and isinstance(val, str):
-            parts.append(f"<h3>{html_mod.escape(val)}</h3>")
-
-        elif btype in ("image", "blog_image") and isinstance(val, dict):
-            src     = val.get("download_url") or val.get("url", "")
-            caption = val.get("caption", "")
-            if src:
-                cap_html = (f"<figcaption>{html_mod.escape(caption)}</figcaption>"
-                            if caption else "")
-                parts.append(f'<figure><img src="{src}" style="max-width:100%">'
-                              f'{cap_html}</figure>')
-
-        elif btype == "embed" and isinstance(val, dict):
-            href = val.get("url", "")
-            if href:
-                parts.append(f'<p><a href="{href}">{href}</a></p>')
-
-        elif btype == "quote" and isinstance(val, (str, dict)):
-            quote = val if isinstance(val, str) else val.get("quote", str(val))
-            parts.append(f"<blockquote>{html_mod.escape(quote)}</blockquote>")
-
-        elif isinstance(val, str) and val.strip():
-            parts.append(f"<p>{html_mod.escape(val)}</p>")
-
+    for raw in raw_chunks:
+        try:
+            parts.append(json.loads(f'"{raw}"'))
+        except Exception:
+            parts.append(raw)   # fall back to raw if decode fails
     return "\n".join(parts)
 
 
-# ── article content (with cache) ──────────────────────────────────────────────
-def _find_body(obj, depth: int = 0):
-    """Recursively hunt for a non-empty StreamField 'body' list."""
-    if depth > 6:
-        return None
-    if isinstance(obj, dict):
-        if isinstance(obj.get("body"), list) and obj["body"]:
-            return obj["body"]
-        for v in obj.values():
-            found = _find_body(v, depth + 1)
-            if found:
-                return found
-    elif isinstance(obj, list):
-        for item in obj:
-            found = _find_body(item, depth + 1)
-            if found:
-                return found
-    return None
+def _extract_json_array(text: str, key: str) -> list:
+    """
+    Locate `key` in `text` and extract the JSON array that follows it
+    using bracket-depth matching (safe against nested arrays).
+    """
+    idx = text.find(f'"{key}"')
+    if idx == -1:
+        return []
+    arr_start = text.find('[', idx)
+    if arr_start == -1:
+        return []
+
+    depth = 0
+    for i in range(arr_start, len(text)):
+        c = text[i]
+        if c == '[':
+            depth += 1
+        elif c == ']':
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[arr_start : i + 1])
+                except Exception as exc:
+                    print(f"  [error] JSON array parse: {exc}")
+                    return []
+    return []
 
 
-def _scrape_content(news_slug: str, category_slug: str) -> str:
-    """Actually fetch and parse one article page via plain HTTP."""
-    url = f"{SITE_BASE}/{category_slug}/{news_slug}"
-    raw = http_get(url)
-    if not raw:
-        return ""
+def fetch_stories(category_slug: str) -> list[dict]:
+    """Fetch category page and extract the categoryAllStories list from RSC data."""
+    html = http_get(f"{SITE_BASE}/{category_slug}")
+    if not html:
+        return []
 
-    soup = BeautifulSoup(raw, "lxml")
+    rsc_text = _decode_rsc_chunks(html)
+    stories  = _extract_json_array(rsc_text, "categoryAllStories")
 
-    # ── try __NEXT_DATA__ (structured, preferred) ─────────────────────────────
-    nd_tag = soup.find("script", {"id": "__NEXT_DATA__"})
-    if nd_tag and nd_tag.string:
+    if not stories:
+        print(f"  [warn] categoryAllStories not found in RSC data for /{category_slug}")
+    else:
+        print(f"  RSC: {len(stories)} articles found")
+
+    return stories
+
+
+# ── RSS builder ────────────────────────────────────────────────────────────
+def _pub_dt(story: dict) -> datetime:
+    raw = story.get("first_published_at") or story.get("last_published_at", "")
+    if raw:
         try:
-            nd          = json.loads(nd_tag.string)
-            page_props  = nd.get("props", {}).get("pageProps", {})
-            body_blocks = _find_body(page_props)
-            if body_blocks:
-                rendered = render_blocks(body_blocks)
-                if len(rendered) > 80:
-                    return rendered
-        except Exception as exc:
-            print(f"    [warn] __NEXT_DATA__ parse: {exc}")
-
-    # ── fallback: scrape visible HTML ─────────────────────────────────────────
-    for sel in ("article", "[class*='article-body']", "[class*='story-body']",
-                "[class*='content']", "main"):
-        el = soup.select_one(sel)
-        if el:
-            for dead in el.select("nav,header,footer,script,style,[class*='ad']"):
-                dead.decompose()
-            text = el.get_text(" ", strip=True)
-            if len(text) > 150:
-                return f"<p>{html_mod.escape(text[:6000])}</p>"
-
-    return ""
+            return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except Exception:
+            pass
+    return datetime.now(timezone.utc)
 
 
-def get_article_content(news_slug: str, category_slug: str,
-                        seen: dict) -> tuple[str, bool]:
-    """
-    Return (content_html, was_cached).
-    If the slug is already in seen, return cached content immediately.
-    Otherwise fetch via HTTP, store in seen, and return fresh content.
-    """
-    if news_slug in seen:
-        return seen[news_slug]["content"], True
+def _description(story: dict, url: str, title: str) -> str:
+    img  = story.get("blog_image") or {}
+    # API uses 'url'; older seen.json used 'download_url'
+    thumb   = img.get("url") or img.get("download_url", "")
+    caption = img.get("caption", "")
+    excerpt = story.get("excerpt", "")
+    author  = (story.get("author") or {}).get("name", "")
 
-    content = _scrape_content(news_slug, category_slug)
-    seen[news_slug] = {
-        "content":    content,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-    }
-    return content, False
+    parts: list[str] = []
+
+    if thumb:
+        alt = html_mod.escape(title)
+        parts.append(
+            f'<figure>'
+            f'<img src="{thumb}" alt="{alt}" style="max-width:100%;border-radius:8px">'
+            f'</figure>'
+        )
+        if caption:
+            parts.append(f'<p><small>{html_mod.escape(caption)}</small></p>')
+
+    if excerpt:
+        parts.append(f"<p>{html_mod.escape(excerpt)}</p>")
+
+    if author:
+        parts.append(f"<p><em>— {html_mod.escape(author)}</em></p>")
+
+    parts.append(f'<p><a href="{url}">চরচায় পড়ুন →</a></p>')
+    return "\n".join(parts)
 
 
-# ── RSS builder ───────────────────────────────────────────────────────────────
-def build_rss(articles: list[tuple[dict, str]], category_slug: str,
-              title_bn: str, out_file: str) -> None:
+def build_rss(
+    stories: list[dict],
+    cat: str,
+    title_bn: str,
+    out_file: str,
+) -> None:
     fg = FeedGenerator()
-    fg.id(f"{SITE_BASE}/{category_slug}")
+    fg.id(f"{SITE_BASE}/{cat}")
     fg.title(f"{title_bn} | চরচা")
-    fg.link(href=f"{SITE_BASE}/{category_slug}", rel="alternate")
-    fg.link(href=f"{SITE_BASE}/{category_slug}.xml", rel="self")
+    fg.link(href=f"{SITE_BASE}/{cat}",      rel="alternate")
+    fg.link(href=f"{SITE_BASE}/{cat}.xml",  rel="self")
     fg.language("bn")
-    fg.description(f"চরচা – {title_bn}")
+    fg.description(f"চরচা — {title_bn}")
 
-    for story, content in articles:
-        slug = story.get("news_slug", "")
+    added = 0
+    for story in stories:
+        if added >= MAX_ARTICLES:
+            break
+
+        slug = story.get("news_slug") or story.get("slug", "")
         if not slug:
             continue
 
-        title    = story.get("title", "(শিরোনাম নেই)")
-        url      = f"{SITE_BASE}/{category_slug}/{slug}"
-        excerpt  = story.get("excerpt", "")
-        pub_str  = (story.get("meta") or {}).get("first_published_at", "")
-        img_info = story.get("blog_image") or {}
-        thumb    = img_info.get("download_url", "")
-        caption  = img_info.get("caption", "")
-
-        pub_dt = datetime.now(timezone.utc)
-        if pub_str:
-            try:
-                pub_dt = datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
-            except Exception:
-                pass
-
-        desc_parts: list[str] = []
-        if thumb:
-            alt = html_mod.escape(title)
-            cap = (f"<br><small>{html_mod.escape(caption)}</small>" if caption else "")
-            desc_parts.append(f'<p><img src="{thumb}" alt="{alt}" style="max-width:100%">{cap}</p>')
-        if content:
-            desc_parts.append(content)
-        elif excerpt:
-            desc_parts.append(f"<p>{html_mod.escape(excerpt)}</p>")
+        title = story.get("title") or "(শিরোনাম নেই)"
+        url   = f"{SITE_BASE}/{cat}/{slug}"
 
         fe = fg.add_entry()
         fe.id(url)
         fe.title(title)
         fe.link(href=url)
-        fe.published(pub_dt)
-        fe.updated(pub_dt)
-        fe.description("\n".join(desc_parts))
+        fe.published(_pub_dt(story))
+        fe.updated(_pub_dt(story))
+        fe.description(_description(story, url, title))
+        added += 1
 
     fg.rss_file(out_file, pretty=True)
-    print(f"  → saved {out_file}")
+    print(f"  → {out_file} ({added} items)")
 
 
-# ── index.html ────────────────────────────────────────────────────────────────
-def write_index(done: list[str], seen: dict) -> None:
-    now        = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    total_seen = len(seen)
+# ── index.html ─────────────────────────────────────────────────────────────
+def write_index(counts: dict[str, int]) -> None:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     cards = ""
     for slug, title_bn in CATEGORIES:
-        if slug not in done:
-            continue
+        n = counts.get(slug, 0)
         cards += f"""
     <div class="card">
-      <div class="card-icon">📰</div>
+      <div class="icon">📰</div>
       <h2>{title_bn}</h2>
-      <p class="src"><a href="{SITE_BASE}/{slug}" target="_blank">{SITE_BASE}/{slug}</a></p>
+      <p class="count">{n} articles</p>
+      <p class="src">
+        <a href="{SITE_BASE}/{slug}" target="_blank">{SITE_BASE}/{slug}</a>
+      </p>
       <div class="btns">
-        <a class="btn-rss" href="{slug}.xml">📡 RSS</a>
-        <a class="btn-web" href="{SITE_BASE}/{slug}" target="_blank">🌐 Source</a>
+        <a class="btn-r" href="{slug}.xml">📡 RSS</a>
+        <a class="btn-w" href="{SITE_BASE}/{slug}" target="_blank">🌐 Source</a>
       </div>
     </div>"""
 
-    html_out = f"""<!DOCTYPE html>
+    page = f"""<!DOCTYPE html>
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Chaarcha RSS Feeds</title>
 <style>
-  :root{{--blue:#274e8f;--light:#f0f4fb;}}
+  :root{{--b:#274e8f;--bg:#f0f4fb}}
   *{{box-sizing:border-box;margin:0;padding:0}}
   body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-        background:var(--light);color:#222;padding:2rem}}
-  header{{max-width:860px;margin:0 auto 2rem}}
-  h1{{color:var(--blue);font-size:1.9rem;margin-bottom:.3rem}}
-  .meta{{color:#666;font-size:.85rem}}
-  .cache-note{{margin-top:.4rem;font-size:.8rem;color:#888;
-               background:#fff;display:inline-block;padding:.2rem .7rem;
-               border-radius:20px;border:1px solid #dde}}
-  .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-         gap:1.2rem;max-width:860px;margin:0 auto}}
-  .card{{background:#fff;border-radius:12px;padding:1.5rem;
-         box-shadow:0 2px 10px rgba(0,0,0,.07);display:flex;flex-direction:column;gap:.6rem}}
-  .card-icon{{font-size:2rem}}
-  .card h2{{color:var(--blue);font-size:1.15rem}}
-  .src{{font-size:.72rem;color:#999;word-break:break-all}}
+        background:var(--bg);color:#222;padding:2rem}}
+  header{{max-width:820px;margin:0 auto 2rem}}
+  h1{{color:var(--b);font-size:1.8rem;margin-bottom:.3rem}}
+  .meta{{color:#666;font-size:.85rem;margin-top:.25rem}}
+  .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+         gap:1rem;max-width:820px;margin:0 auto}}
+  .card{{background:#fff;border-radius:10px;padding:1.4rem;
+         box-shadow:0 2px 8px rgba(0,0,0,.07);
+         display:flex;flex-direction:column;gap:.5rem}}
+  .icon{{font-size:1.8rem}}
+  .card h2{{color:var(--b);font-size:1.1rem}}
+  .count,.src{{font-size:.75rem;color:#999}}
   .src a{{color:#999;text-decoration:none}}
-  .btns{{display:flex;gap:.6rem;margin-top:.4rem}}
-  .btn-rss,.btn-web{{padding:.4rem .9rem;border-radius:7px;
-                     text-decoration:none;font-size:.88rem;font-weight:600}}
-  .btn-rss{{background:var(--blue);color:#fff}}
-  .btn-web{{background:#e8eef7;color:var(--blue)}}
-  .btn-rss:hover{{background:#1a3a6b}}
-  .btn-web:hover{{background:#ccd8ee}}
-  footer{{text-align:center;margin-top:2.5rem;font-size:.78rem;color:#aaa}}
+  .src a:hover{{text-decoration:underline}}
+  .btns{{display:flex;gap:.5rem;margin-top:auto;padding-top:.6rem}}
+  .btn-r,.btn-w{{padding:.35rem .9rem;border-radius:6px;
+                 text-decoration:none;font-size:.85rem;font-weight:600}}
+  .btn-r{{background:var(--b);color:#fff}}
+  .btn-w{{background:#e8eef7;color:var(--b)}}
+  .btn-r:hover{{background:#1a3a6b}}
+  .btn-w:hover{{background:#ccd8ee}}
+  footer{{text-align:center;margin-top:2.5rem;font-size:.75rem;color:#aaa}}
   footer a{{color:#aaa}}
 </style>
 </head>
 <body>
 <header>
-  <h1>চরচা RSS Feeds</h1>
-  <p class="meta">Last updated: {now} &nbsp;·&nbsp; refreshes every 4 hours</p>
-  <p class="cache-note">📦 {total_seen} articles cached in seen.json</p>
+  <h1>চরচা RSS</h1>
+  <p class="meta">Updated: {now} &nbsp;·&nbsp; refreshes every 4 h</p>
 </header>
 <div class="grid">{cards}
 </div>
 <footer>
-  Scraped via HTTP &nbsp;·&nbsp;
   <a href="https://www.chaarcha.com" target="_blank">chaarcha.com</a>
 </footer>
 </body>
 </html>"""
+
     with open("index.html", "w", encoding="utf-8") as f:
-        f.write(html_out)
-    print("  → saved index.html")
+        f.write(page)
+    print("  → index.html")
 
 
-# ── main ──────────────────────────────────────────────────────────────────────
+# ── main ───────────────────────────────────────────────────────────────────
 def main() -> None:
-    seen = load_seen()
-    print(f"[cache] {len(seen)} slugs already in {SEEN_FILE}")
+    counts: dict[str, int] = {}
 
-    done: list[str] = []
-
-    for category_slug, title_bn in CATEGORIES:
-        print(f"\n[{category_slug}] fetching list …")
-        stories = fetch_story_list(category_slug)
-        print(f"  found {len(stories)} articles total, using up to {MAX_ARTICLES}")
-
-        articles:  list[tuple[dict, str]] = []
-        new_count  = 0
-        hit_count  = 0
-
-        for i, story in enumerate(stories[:MAX_ARTICLES]):
-            slug = story.get("news_slug", "")
-            if not slug:
-                continue
-
-            short   = story.get("title", slug)[:65]
-            content, cached = get_article_content(slug, category_slug, seen)
-
-            if cached:
-                hit_count += 1
-                print(f"  [{i+1:02d}] (cache) {short}")
-            else:
-                new_count += 1
-                print(f"  [{i+1:02d}] (fetch) {short}")
-                # only sleep after a real network request
-                time.sleep(2)
-
-            articles.append((story, content))
-
-        print(f"  summary: {hit_count} cached  {new_count} newly fetched")
-        build_rss(articles, category_slug, title_bn, f"{category_slug}.xml")
-        done.append(category_slug)
-
-        # save after each category so a mid-run crash doesn't lose work
-        save_seen(seen)
+    for cat, title_bn in CATEGORIES:
+        print(f"\n[{cat}]")
+        stories  = fetch_stories(cat)
+        n        = min(len(stories), MAX_ARTICLES)
+        counts[cat] = n
+        print(f"  using {n} of {len(stories)}")
+        build_rss(stories, cat, title_bn, f"{cat}.xml")
         time.sleep(1)
 
-    write_index(done, seen)
-    save_seen(seen)   # final save
-    print(f"\n✓ done. seen.json now has {len(seen)} entries.")
+    write_index(counts)
+    print("\n✓ done.")
 
 
 if __name__ == "__main__":
